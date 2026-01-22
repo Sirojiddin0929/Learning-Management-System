@@ -2,6 +2,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  
 }
 
 datasource db {
@@ -10,6 +11,7 @@ datasource db {
 
 
 enum UserRole {
+  SUPERADMIN
   ADMIN
   MENTOR
   ASSISTANT
@@ -69,6 +71,17 @@ model User {
   
   
   createdCourses   Course[]         @relation("MentorCourses")
+  refreshTokens    RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MentorProfile {
@@ -306,4 +319,23 @@ model QuestionAnswer {
 
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model Contact {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  phone     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

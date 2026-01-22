@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -12,10 +13,23 @@ import { HomeworksModule } from './homeworks/homeworks.module';
 import { ExamsModule } from './exams/exams.module';
 import { QuestionsModule } from './questions/questions.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { SmsModule } from './sms/sms.module';
+import { AdminModule } from './admin/admin.module';
+import { StudentModule } from './student/student.module';
+import { MentorModule } from './mentor/mentor.module';
+import { AssistantModule } from './assistant/assistant.module';
+import { VerificationModule } from './verification/verification.module';
+import { MyModule } from './my/my.module';
+import { CourseCategoryModule } from './course-category/course-category.module';
+import { PurchasedCoursesModule } from './purchased-courses/purchased-courses.module';
+import { ContactModule } from './contact/contact.module';
+import { PaymentModule } from './payment/payment.module';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.register({ isGlobal: true }),
     LoggerModule.forRoot({
       pinoHttp: {
         transport: {
@@ -27,6 +41,14 @@ import { RatingsModule } from './ratings/ratings.module';
       },
     }),
     PrismaModule,
+    SmsModule,
+    AdminModule,
+    StudentModule,
+    MentorModule,
+    AssistantModule,
+    VerificationModule,
+    MyModule,
+    CourseCategoryModule,
     AuthModule,
     UsersModule,
     CoursesModule,
@@ -35,6 +57,10 @@ import { RatingsModule } from './ratings/ratings.module';
     ExamsModule,
     QuestionsModule,
     RatingsModule,
+    PurchasedCoursesModule,
+    ContactModule,
+    PaymentModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

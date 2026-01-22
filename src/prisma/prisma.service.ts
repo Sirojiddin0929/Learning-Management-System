@@ -1,21 +1,46 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+// import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+// import { PrismaClient } from '@prisma/client';
+
+// @Injectable()
+// export class PrismaService
+//   extends PrismaClient
+//   implements OnModuleInit, OnModuleDestroy
+// {
+//   constructor() {
+//     super({
+//       log:['query','error','warn']
+//     });
+//   }
+
+//   async onModuleInit() {
+//     await this.$connect();
+//   }
+
+//   async onModuleDestroy() {
+//     await this.$disconnect();
+//   }
+// }
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
+  implements OnModuleInit
 {
   constructor() {
-    super();
-    // Prisma 7 with prisma.config.ts might not need params here if using global config
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+
+    super({
+      adapter: new PrismaPg(pool),
+    });
   }
 
   async onModuleInit() {
     await this.$connect();
-  }
-
-  async onModuleDestroy() {
-    await this.$disconnect();
   }
 }
