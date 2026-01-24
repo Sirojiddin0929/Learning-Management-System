@@ -21,15 +21,15 @@ export class CreateCourseDto {
   @Type(() => Number)
   price: number;
 
-  @ApiProperty({ example: 'banner.jpg', description: 'Banner image file', required: false })
+  @ApiProperty({ type: 'string', format: 'binary', description: 'Banner image file', required: false })
   @IsString()
   @IsOptional()
-  banner?: string;
+  banner?: any; // Changed from string to any for file handling
 
-  @ApiProperty({ example: 'intro.mp4', required: false, description: 'Intro video file' })
+  @ApiProperty({ type: 'string', format: 'binary', required: false, description: 'Intro video file' })
   @IsString()
   @IsOptional()
-  introVideo?: string;
+  introVideo?: any; // Changed from string to any for file handling
 
   @ApiProperty({ enum: CourseLevel, example: CourseLevel.BEGINNER, description: 'Course difficulty level' })
   @IsEnum(CourseLevel)

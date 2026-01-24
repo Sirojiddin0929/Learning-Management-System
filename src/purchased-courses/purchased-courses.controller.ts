@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PurchasedCoursesService } from './purchased-courses.service';
 import { PurchaseCourseDto } from './dto/purchase-course.dto';
@@ -7,6 +7,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { QueryMyPurchasesDto } from './dto/new-purchase.dto';
+import { QueryCourseStudentsDto } from './dto/old-purchase.dto'
 
 @ApiTags('Purchased Courses')
 @Controller('purchased-courses')
@@ -18,7 +20,7 @@ export class PurchasedCoursesController {
   @Get('mine')
   @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all courses purchased by the current user (Student)' })
-  getMyPurchasedCourses(@Request() req) {
+  getMyPurchasedCourses(@Request() req, @Query() query:QueryMyPurchasesDto) {
     return this.purchasedCoursesService.getMyPurchasedCourses(req.user.id);
   }
 
@@ -39,7 +41,7 @@ export class PurchasedCoursesController {
   @Get('course/:id/students')
   @Roles(UserRole.MENTOR, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all students who purchased a specific course (Mentor, Admin)' })
-  getCourseStudents(@Param('id') courseId: string) {
+  getCourseStudents(@Param('id') courseId: string, @Query() query:QueryCourseStudentsDto) {
     return this.purchasedCoursesService.getCourseStudents(courseId);
   }
 

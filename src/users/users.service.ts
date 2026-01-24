@@ -2,7 +2,8 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User, UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { CreateUserDto, UpdateMentorDto } from './dto/user.dto';
+import { CreateUserDto, CreateMentorDto, CreateAssistantDto, UpdateMentorDto } from './dto/user.dto';
+import { QueryCommonDto, QueryUserDto } from './dto/query-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -27,21 +28,39 @@ export class UsersService {
   }
 
   
-  async getMentors() {
-    return this.prisma.user.findMany({
-      where: { role: UserRole.MENTOR },
-      select: {
-        id: true,
-        fullName: true,
-        image: true,
-        createdAt: true,
-        mentorProfile: true,
-        _count: {
-          select: { createdCourses: true },
+  async getMentors(query: QueryCommonDto) {
+    const { offset, limit, search } = query;
+    const where: Prisma.UserWhereInput = {
+      role: UserRole.MENTOR,
+      ...(search && {
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [total, users] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          fullName: true,
+          image: true,
+          createdAt: true,
+          mentorProfile: true,
+          _count: {
+            select: { createdCourses: true },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return { total, users };
   }
 
   
@@ -78,18 +97,37 @@ export class UsersService {
   }
 
   
-  async getAllUsers() {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        phone: true,
-        fullName: true,
-        role: true,
-        image: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getAllUsers(query: QueryUserDto) {
+    const { offset, limit, search, role } = query;
+    const where: Prisma.UserWhereInput = {
+      ...(role && { role }),
+      ...(search && {
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [total, users] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          phone: true,
+          fullName: true,
+          role: true,
+          image: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return { total, users };
   }
 
   
@@ -159,7 +197,7 @@ export class UsersService {
   }
 
   
-  async createMentor(dto: CreateUserDto) {
+  async createMentor(dto: CreateMentorDto) {
     const existing = await this.findOne(dto.phone);
     if (existing) {
       throw new BadRequestException('User with this phone already exists');
@@ -168,39 +206,71 @@ export class UsersService {
     const hashedPassword = await argon2.hash(dto.password);
     return this.prisma.user.create({
       data: {
-        ...dto,
+        phone: dto.phone,
         password: hashedPassword,
+        fullName: dto.fullName,
+        image: dto.image,
         role: UserRole.MENTOR,
+        mentorProfile: {
+          create: {
+            experience: dto.experience,
+            job: dto.job,
+            about: dto.about,
+            telegram: dto.telegram,
+            instagram: dto.instagram,
+            linkedin: dto.linkedin,
+            facebook: dto.facebook,
+            github: dto.github,
+            website: dto.website,
+          },
+        },
       },
       select: {
         id: true,
         phone: true,
         fullName: true,
         role: true,
+        mentorProfile: true,
       },
     });
   }
 
   
-  async createAssistant(dto: CreateUserDto) {
+  async createAssistant(dto: CreateAssistantDto) {
     const existing = await this.findOne(dto.phone);
     if (existing) {
       throw new BadRequestException('User with this phone already exists');
     }
 
     const hashedPassword = await argon2.hash(dto.password);
-    return this.prisma.user.create({
-      data: {
-        ...dto,
-        password: hashedPassword,
-        role: UserRole.ASSISTANT,
-      },
-      select: {
-        id: true,
-        phone: true,
-        fullName: true,
-        role: true,
-      },
+    // Transaction to ensure both user creation and course assignment happen or neither
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          phone: dto.phone,
+          password: hashedPassword,
+          fullName: dto.fullName,
+          image: dto.image,
+          role: UserRole.ASSISTANT,
+        },
+        select: {
+          id: true,
+          phone: true,
+          fullName: true,
+          role: true,
+        },
+      });
+
+      if (dto.courseId) {
+        await tx.assignedCourse.create({
+          data: {
+            userId: user.id,
+            courseId: dto.courseId,
+          },
+        });
+      }
+
+      return user;
     });
   }
 
@@ -216,17 +286,41 @@ export class UsersService {
     const updateData: any = {};
     if (dto.fullName) updateData.fullName = dto.fullName;
     if (dto.image) updateData.image = dto.image;
+    if (dto.phone) updateData.phone = dto.phone;
     if (dto.password) updateData.password = await argon2.hash(dto.password);
+
+    const profileData: any = {};
+    if (dto.experience !== undefined) profileData.experience = dto.experience;
+    if (dto.job !== undefined) profileData.job = dto.job;
+    if (dto.about !== undefined) profileData.about = dto.about;
+    if (dto.telegram !== undefined) profileData.telegram = dto.telegram;
+    if (dto.instagram !== undefined) profileData.instagram = dto.instagram;
+    if (dto.linkedin !== undefined) profileData.linkedin = dto.linkedin;
+    if (dto.facebook !== undefined) profileData.facebook = dto.facebook;
+    if (dto.github !== undefined) profileData.github = dto.github;
+    if (dto.website !== undefined) profileData.website = dto.website;
 
     return this.prisma.user.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...updateData,
+        mentorProfile: {
+          upsert: {
+            create: {
+              experience: dto.experience || 0,
+              ...profileData,
+            },
+            update: profileData,
+          },
+        },
+      },
       select: {
         id: true,
         phone: true,
         fullName: true,
         role: true,
         image: true,
+        mentorProfile: true,
       },
     });
   }

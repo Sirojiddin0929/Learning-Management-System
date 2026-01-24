@@ -22,6 +22,7 @@ import { UpdateLessonSectionDto } from './dto/update-lesson-section.dto';
 import { QueryLessonSectionsDto } from './dto/query-lesson-sections.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { UpdateLessonViewDto } from './dto/update-lesson-view.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -93,6 +94,20 @@ export class LessonsApiController {
   getLessonSingle(@Param('lessonId') lessonId: string, @Request() req) {
     return this.lessonsService.getLessonSingle(lessonId, req.user.id);
   }
+
+  @ApiBearerAuth('access-token')
+  @Put('view/:lessonId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Update lesson view status' })
+  @ApiParam({ name: 'lessonId', description: 'Lesson UUID' })
+  updateLessonView(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: UpdateLessonViewDto,
+    @Request() req,
+  ) {
+    return this.lessonsService.updateLessonView(lessonId, req.user.id, dto.view);
+  }
 }
 
 // =================== LESSON GROUPS CONTROLLER ===================
@@ -146,9 +161,25 @@ export class LessonsController {
     return this.lessonsService.getAllSections(courseId, query);
   }
 
-  @Get('sections')
-  @ApiOperation({ summary: 'Get all sections with lessons (Legacy endpoint)' })
-  findAllSections(@Query('courseId') courseId: string) {
-    return this.lessonsService.findAllSections(courseId);
+  @Get('mine-all/:course_id')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get all lesson groups for a course (Student)' })
+  @ApiParam({ name: 'course_id', description: 'Course UUID' })
+  @ApiQuery({ name: 'offset', required: false, example: 0 })
+  @ApiQuery({ name: 'limit', required: false, example: 8 })
+  @ApiQuery({ name: 'include_lessons', required: false, example: false })
+  getMineAllSections(
+    @Param('course_id') courseId: string,
+    @Query() query: QueryLessonSectionsDto,
+    @Request() req
+  ) {
+    return this.lessonsService.getMineAllSections(req.user.id, courseId, query);
+  }
+
+  @Get('detail/:id')
+  @ApiOperation({ summary: 'Get lesson group/section details' })
+  @ApiParam({ name: 'id', type: 'number' })
+  getSectionDetail(@Param('id', ParseIntPipe) id: number) {
+    return this.lessonsService.getSectionDetail(id);
   }
 }

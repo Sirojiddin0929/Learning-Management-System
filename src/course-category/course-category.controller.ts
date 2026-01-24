@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe,UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe,UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CourseCategoryService } from './course-category.service';
 import { CreateCourseCategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import { QueryCategoryDto } from './dto/query-category.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -14,8 +15,8 @@ export class CourseCategoryController {
 
   @Get('all')
   @ApiOperation({ summary: 'Get all course categories' })
-  findAll() {
-    return this.categoryService.findAll();
+  findAll(@Query() query: QueryCategoryDto) {
+    return this.categoryService.findAll(query);
   }
 
   @Get('single/:id')

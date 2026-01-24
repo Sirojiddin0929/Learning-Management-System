@@ -1,13 +1,15 @@
 import { Injectable, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as argon2 from 'argon2';
+import * as fs from 'fs';
+import * as path from 'path';
 import { 
-  UpdateProfileDto, 
   UpdateLastActivityDto, 
   UpdatePhoneDto, 
-  UpdatePasswordDto, 
-  UpdateMentorProfileDto 
+  UpdatePasswordDto 
 } from './dto/my.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateMentorProfileDto } from './dto/update-mentor-profile.dto';
 
 @Injectable()
 export class MyService {
@@ -23,17 +25,30 @@ export class MyService {
         role: true,
         image: true,
         createdAt: true,
-        mentorProfile: true,
+        mentorProfile: true, // Make sure this is selected
       },
     });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  async updateProfile(userId: number, dto: UpdateProfileDto) {
+  async updateProfile(userId: number, dto: UpdateProfileDto, imageFile?: Express.Multer.File) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const data: any = { ...dto };
+    delete data.image; // Remove dummy image field from dto if present from swagger binary field
+
+    if (imageFile) {
+      if (user.image) {
+        this.deleteFile(user.image);
+      }
+      data.image = `/uploads/${imageFile.filename}`; // Assuming general uploads or specific config
+    }
+
     return this.prisma.user.update({
       where: { id: userId },
-      data: dto,
+      data,
       select: {
         id: true,
         fullName: true,
@@ -41,6 +56,8 @@ export class MyService {
       },
     });
   }
+
+  // ... (last activity and phone/password methods remain same)
 
   async getLastActivity(userId: number) {
     return this.prisma.lastActivity.findUnique({
@@ -115,5 +132,16 @@ export class MyService {
       },
       update: dto,
     });
+  }
+
+  private deleteFile(filePath: string): void {
+    try {
+      const fullPath = path.join(process.cwd(), filePath);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    } catch (error) {
+      console.error(`Failed to delete file ${filePath}:`, error);
+    }
   }
 }

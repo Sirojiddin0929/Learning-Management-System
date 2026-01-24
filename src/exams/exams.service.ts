@@ -4,20 +4,38 @@ import { CreateExamDto } from './dto/create-exam.dto';
 import { CreateManyExamsDto } from './dto/create-many-exams.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { PassExamDto } from './dto/pass-exam.dto';
+import { ExamResultQueryDto } from './dto/query-exam-result.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ExamsService {
   constructor(private prisma: PrismaService) {}
 
   async createExam(dto: CreateExamDto) {
+    const sectionId = dto.lessonGroupId || dto.sectionId;
+    if (!sectionId) {
+       throw new Error('lessonGroupId or sectionId must be provided');
+    }
+    const { lessonGroupId, sectionId: _, ...data } = dto;
     return this.prisma.exam.create({
-      data: dto,
+      data: {
+        ...data,
+        sectionId,
+      },
     });
   }
 
   async createManyExams(dto: CreateManyExamsDto) {
+    const { lessonGroupId, exams } = dto;
+    const examsData = exams.map((exam) => {
+        const { lessonGroupId: _, sectionId: __, ...rest } = exam;
+        return {
+            ...rest,
+            sectionId: lessonGroupId
+        }
+    })
     return this.prisma.exam.createMany({
-      data: dto.exams,
+      data: examsData,
     });
   }
 
@@ -94,21 +112,63 @@ export class ExamsService {
     });
   }
 
-  async getAllResults() {
-    return this.prisma.examResult.findMany({
-      include: {
-        user: { select: { id: true, fullName: true, phone: true } },
-        section: true,
-      },
-    });
+  async getAllResults(query: ExamResultQueryDto) {
+    const { offset, limit, lesson_group_id, user_id, passed, date_from, date_to } = query;
+    const where: Prisma.ExamResultWhereInput = {};
+
+    if (lesson_group_id) where.sectionId = lesson_group_id;
+    if (user_id) where.userId = user_id;
+    if (passed !== undefined) where.passed = passed;
+
+    if (date_from || date_to) {
+      where.createdAt = {};
+      if (date_from) where.createdAt.gte = new Date(date_from);
+      if (date_to) where.createdAt.lte = new Date(new Date(date_to).setHours(23, 59, 59, 999));
+    }
+
+    const [total, results] = await this.prisma.$transaction([
+        this.prisma.examResult.count({ where }),
+        this.prisma.examResult.findMany({
+            where,
+            skip: offset,
+            take: limit,
+            include: {
+                user: { select: { id: true, fullName: true, phone: true } },
+                section: true,
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+    ]);
+
+    return { total, results };
   }
 
-  async getLessonGroupResults(sectionId: number) {
-    return this.prisma.examResult.findMany({
-      where: { sectionId },
-      include: {
-        user: { select: { id: true, fullName: true, phone: true } },
-      },
-    });
+  async getLessonGroupResults(sectionId: number, query: ExamResultQueryDto) {
+    const { offset, limit, user_id, passed, date_from, date_to } = query;
+    const where: Prisma.ExamResultWhereInput = { sectionId };
+
+    if (user_id) where.userId = user_id;
+    if (passed !== undefined) where.passed = passed;
+
+    if (date_from || date_to) {
+      where.createdAt = {};
+      if (date_from) where.createdAt.gte = new Date(date_from);
+      if (date_to) where.createdAt.lte = new Date(new Date(date_to).setHours(23, 59, 59, 999));
+    }
+
+     const [total, results] = await this.prisma.$transaction([
+        this.prisma.examResult.count({ where }),
+        this.prisma.examResult.findMany({
+            where,
+            skip: offset,
+            take: limit,
+            include: {
+                user: { select: { id: true, fullName: true, phone: true } },
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+    ]);
+
+    return { total, results };
   }
 }

@@ -2,10 +2,11 @@ import {Controller,Get,Post,Patch,Delete,Body,Param,Query,UseGuards,Request,UseI
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiParam} from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { QueryCoursesDto } from './dto/query-courses.dto';
+import { AssignAssistantDto } from './dto/assign-assistant.dto';
+import { UpdateCourseMentorDto } from './dto/update-course-mentor.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -17,23 +18,6 @@ import { multerConfig } from '../config/file-upload.config';
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
-  
-  @ApiBearerAuth('access-token')
-  @Post('categories')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new course category (Admin only)' })
-  createCategory(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.coursesService.createCategory(createCategoryDto);
-  }
-
-  @Get('categories')
-  @ApiOperation({ summary: 'Get all course categories' })
-  findAllCategories() {
-    return this.coursesService.findAllCategories();
-  }
-
-  
   @ApiBearerAuth('access-token')
   @Post('create')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,6 +33,12 @@ export class CoursesController {
     @Request() req,
     @UploadedFiles() files: { banner?: Express.Multer.File[]; introVideo?: Express.Multer.File[] },
   ) {
+    if (files.banner && files.banner[0]) {
+      createCourseDto.banner = files.banner[0].filename;
+    }
+    if (files.introVideo && files.introVideo[0]) {
+      createCourseDto.introVideo = files.introVideo[0].filename;
+    }
     return this.coursesService.createCourse(createCourseDto, req.user.id, files);
   }
 
@@ -69,6 +59,12 @@ export class CoursesController {
     @Request() req,
     @UploadedFiles() files: { banner?: Express.Multer.File[]; introVideo?: Express.Multer.File[] },
   ) {
+    if (files.banner && files.banner[0]) {
+      updateCourseDto.banner = files.banner[0].filename;
+    }
+    if (files.introVideo && files.introVideo[0]) {
+      updateCourseDto.introVideo = files.introVideo[0].filename;
+    }
     return this.coursesService.updateCourse(id, updateCourseDto, req.user.id, req.user.role, files);
   }
 
@@ -130,6 +126,62 @@ export class CoursesController {
     return this.coursesService.unpublishCourse(id);
   }
 
+  @ApiBearerAuth('access-token')
+  @Get('my/assigned')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ASSISTANT)
+  @ApiOperation({ summary: 'Get assigned courses for assistant' })
+  getMyAssignedCourses(@Request() req, @Query() query: QueryCoursesDto) {
+    return this.coursesService.getMyAssignedCourses(req.user.id, query);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Post('assign-assistant')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MENTOR)
+  @ApiOperation({ summary: 'Assign an assistant to a course' })
+  assignAssistant(@Body() dto: AssignAssistantDto) {
+    return this.coursesService.assignAssistant(dto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Post('unassign-assistant')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MENTOR)
+  @ApiOperation({ summary: 'Unassign an assistant from a course' })
+  unassignAssistant(@Body() dto: AssignAssistantDto) {
+    return this.coursesService.unassignAssistant(dto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Patch('update-mentor')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update course mentor (Admin only)' })
+  updateCourseMentor(@Body() dto: UpdateCourseMentorDto) {
+    return this.coursesService.updateCourseMentor(dto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Get('single-full/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MENTOR, UserRole.ASSISTANT)
+  @ApiOperation({ summary: 'Get full course details (Admin/Mentor/Assistant)' })
+  @ApiParam({ name: 'id', description: 'Course UUID' })
+  getOneFull(@Param('id') id: string) {
+    return this.coursesService.getOneFull(id);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Get(':courseId/assistants')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MENTOR)
+  @ApiOperation({ summary: 'Get assistants for a course' })
+  @ApiParam({ name: 'courseId', description: 'Course UUID' })
+  getCourseAssistants(@Param('courseId') courseId: string, @Query() query: QueryCoursesDto) {
+    return this.coursesService.getCourseAssistants(courseId, query);
+  }
+
   @Get('single/:id')
   @ApiOperation({ summary: 'Get a single course by ID (Public)' })
   @ApiParam({ name: 'id', description: 'Course UUID' })
@@ -138,9 +190,10 @@ export class CoursesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all published courses (Public)' })
-  findAllCourses() {
-    return this.coursesService.findAllCourses();
+  @ApiOperation({ summary: 'Get all courses (Public/Filtered)' })
+  findAllCourses(@Query() query: QueryCoursesDto) {
+    // Making it public but filtered, as requested "Get /api/courses" with search params
+    return this.coursesService.getAllCourses(query);
   }
 }
 

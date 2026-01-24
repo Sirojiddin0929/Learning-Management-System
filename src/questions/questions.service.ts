@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
-import { CreateAnswerDto } from './dto/create-answer.dto';
+import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { UpdateAnswerDto } from './dto/update-answer.dto';
+import { QuestionQueryDto } from './dto/query-question.dto';
 
 @Injectable()
 export class QuestionsService {
@@ -40,25 +41,68 @@ export class QuestionsService {
     });
   }
 
-  async getMyQuestions(userId: number) {
-    return this.prisma.question.findMany({
-      where: { userId },
-      include: {
-        answer: true,
-        course: { select: { id: true, name: true } }
-      },
-    });
+  async getMyQuestions(userId: number, query: QuestionQueryDto) {
+    const { offset, limit, read, answered, courseId } = query;
+    const where: any = { userId };
+
+    if (courseId) where.courseId = courseId;
+    if (read !== undefined) where.read = read;
+    if (answered !== undefined) {
+      if (answered) {
+        where.answer = { isNot: null };
+      } else {
+        where.answer = null; 
+        // Note: Prisma 1-to-1 relations where condition for null might need explicit "is: null" or just "answer: null" depending on Prisma version, but usually answer: null works or answer: { is: null }
+        // For safe typing and latest Prisma:
+        where.answer = { is: null };
+      }
+    }
+
+    const [total, questions] = await this.prisma.$transaction([
+      this.prisma.question.count({ where }),
+      this.prisma.question.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        include: {
+          answer: true,
+          course: { select: { id: true, name: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+     return { total, questions };
   }
 
-  async findAllByCourse(courseId: string) {
-    return this.prisma.question.findMany({
-      where: { courseId },
-      include: {
-        answer: { include: { user: { select: { fullName: true, role: true } } } },
-        user: { select: { fullName: true, image: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAllByCourse(courseId: string, query: QuestionQueryDto) {
+    const { offset, limit, read, answered } = query;
+    const where: any = { courseId };
+
+    if (read !== undefined) where.read = read;
+    if (answered !== undefined) {
+      if (answered) {
+        where.answer = { isNot: null };
+      } else {
+        where.answer = { is: null };
+      }
+    }
+
+    const [total, questions] = await this.prisma.$transaction([
+      this.prisma.question.count({ where }),
+      this.prisma.question.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        include: {
+          answer: { include: { user: { select: { fullName: true, role: true } } } },
+          user: { select: { fullName: true, image: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+    
+    return { total, questions };
   }
 
   async getQuestionById(id: number) {
@@ -81,7 +125,7 @@ export class QuestionsService {
     });
   }
 
-  async answerQuestion(userId: number, questionId: number, dto: CreateAnswerDto) {
+  async answerQuestion(userId: number, questionId: number, dto: AnswerQuestionDto) {
     
     const question = await this.prisma.question.findUnique({ where: { id: questionId } });
     if (!question) throw new NotFoundException('Question not found');

@@ -1,14 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateAnswerDto {
-  @ApiProperty({ description: 'Updated answer text' })
-  @IsNotEmpty()
-  @IsString()
-  text: string;
-
-  @ApiProperty({ description: 'Updated file URL', required: false })
+  @ApiProperty({ example: 'Updated answer text', required: false })
   @IsOptional()
   @IsString()
-  file?: string;
+  text?: string;
+
+  @ApiProperty({ type: 'string', format: 'binary', required: false })
+  @IsOptional()
+  file?: any;
 }

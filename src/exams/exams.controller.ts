@@ -1,9 +1,10 @@
-import {Controller,Post,Body,Get,Param,ParseIntPipe,UseGuards,Request,Patch,Delete,} from '@nestjs/common';
+import {Controller,Post,Body,Get,Param,ParseIntPipe,UseGuards,Request,Patch,Delete,Query,} from '@nestjs/common';
 import { ExamsService } from './exams.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { CreateManyExamsDto } from './dto/create-many-exams.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { PassExamDto } from './dto/pass-exam.dto';
+import { ExamResultQueryDto } from './dto/query-exam-result.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -82,15 +83,15 @@ export class ExamsController {
   @Get('results')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all exam results (Admin)' })
-  getAllResults() {
-    return this.examsService.getAllResults();
+  getAllResults(@Query() query: ExamResultQueryDto) {
+    return this.examsService.getAllResults(query);
   }
 
   @Get('results/lesson-group/:id')
   @Roles(UserRole.MENTOR)
   @ApiOperation({ summary: 'Get exam results for a lesson group (Mentor)' })
   @ApiParam({ name: 'id', type: 'number' })
-  getLessonGroupResults(@Param('id', ParseIntPipe) id: number) {
-    return this.examsService.getLessonGroupResults(id);
+  getLessonGroupResults(@Param('id', ParseIntPipe) id: number, @Query() query: ExamResultQueryDto) {
+    return this.examsService.getLessonGroupResults(id, query);
   }
 }

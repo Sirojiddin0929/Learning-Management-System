@@ -4,6 +4,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { QueryCoursesDto } from './dto/query-courses.dto';
+import { AssignAssistantDto } from './dto/assign-assistant.dto';
+import { UpdateCourseMentorDto } from './dto/update-course-mentor.dto';
 import { Course, CourseCategory, Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -242,14 +244,177 @@ export class CoursesService {
     return course;
   }
 
-  async findAllCourses(): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: { published: true },
+  async getOneFull(id: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id },
       include: {
         category: true,
-        mentor: { select: { fullName: true, id: true } },
+        mentor: { select: { id: true, fullName: true, phone: true } },
+        sections: {
+          include: {
+            lessons: true,
+          },
+        },
+        assignedTo: {
+            include: {
+                user: { select: { id: true, fullName: true, phone: true } }
+            }
+        },
+        purchasedBy: {
+             include: {
+                user: { select: { id: true, fullName: true, phone: true } }
+            }
+        }
       },
     });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return course;
+  }
+
+  async getMyAssignedCourses(userId: number, query: QueryCoursesDto) {
+    // AssignedTo is for Assistants/Students assigned by admin/mentor?
+    // User request implies ASSISTANT role for this endpoint.
+    // We filter courses where assignedTo contains userId.
+    const { offset = 0, limit = 8, search, level, category_id, mentor_id, price_min, price_max, published } = query;
+
+    const courseWhere: Prisma.CourseWhereInput = {};
+    if (search) courseWhere.name = { contains: search, mode: 'insensitive' };
+    if (level) courseWhere.level = level;
+    if (category_id) courseWhere.categoryId = category_id;
+    if (mentor_id) courseWhere.mentorId = mentor_id;
+    if (published !== undefined) courseWhere.published = published;
+    if (price_min !== undefined || price_max !== undefined) {
+      courseWhere.price = {};
+      if (price_min !== undefined) courseWhere.price.gte = price_min;
+      if (price_max !== undefined) courseWhere.price.lte = price_max;
+    }
+
+    const where: Prisma.AssignedCourseWhereInput = {
+        userId,
+        course: courseWhere
+    };
+
+    const [assignments, total] = await Promise.all([
+        this.prisma.assignedCourse.findMany({
+            where,
+            skip: offset,
+            take: limit,
+            include: {
+                course: {
+                    include: {
+                        category: true,
+                        mentor: { select: { id: true, fullName: true } }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        }),
+        this.prisma.assignedCourse.count({ where })
+    ]);
+
+    return {
+        courses: assignments.map(a => a.course),
+        total,
+        offset,
+        limit
+    };
+  }
+
+  async getCourseAssistants(courseId: string, query: QueryCoursesDto) { // Reusing DTO for pagination
+      const { offset = 0, limit = 8 } = query;
+      const where = { courseId };
+
+      const [assistants, total] = await Promise.all([
+          this.prisma.assignedCourse.findMany({
+              where,
+              skip: offset,
+              take: limit,
+              include: {
+                  user: { select: { id: true, fullName: true, phone: true, role: true } }
+              },
+              orderBy: { createdAt: 'desc' }
+          }),
+          this.prisma.assignedCourse.count({ where })
+      ]);
+
+      return { assistants, total, offset, limit };
+  }
+
+  async assignAssistant(dto: AssignAssistantDto) {
+      // Check if already assigned
+      const exists = await this.prisma.assignedCourse.findUnique({
+          where: {
+              userId_courseId: {
+                  userId: dto.assistantId,
+                  courseId: dto.courseId
+              }
+          }
+      });
+
+      if (exists) {
+          throw new BadRequestException('Assistant already assigned to this course');
+      }
+
+      // Check role? Assuming validation done elsewhere or trusting ID.
+      // Ideally check if user is ASSISTANT.
+      const user = await this.prisma.user.findUnique({ where: { id: dto.assistantId }});
+      if (!user || user.role !== 'ASSISTANT') {
+           // Providing flexibility, maybe assigning STUDENT is also possible via this generic assignedTo?
+           // Request says "assign-assistant", so maybe strict check.
+           // Leaving flexible unless specified, or strictly warning.
+           // Let's strictly check if user exists.
+           if (!user) throw new NotFoundException('User not found');
+      }
+
+      return this.prisma.assignedCourse.create({
+          data: {
+              userId: dto.assistantId,
+              courseId: dto.courseId
+          }
+      });
+  }
+
+  async unassignAssistant(dto: AssignAssistantDto) {
+      const exists = await this.prisma.assignedCourse.findUnique({
+          where: {
+              userId_courseId: {
+                  userId: dto.assistantId,
+                  courseId: dto.courseId
+              }
+          }
+      });
+
+      if (!exists) {
+          throw new NotFoundException('Assignment not found');
+      }
+
+      return this.prisma.assignedCourse.delete({
+          where: {
+              userId_courseId: {
+                  userId: dto.assistantId,
+                  courseId: dto.courseId
+              }
+          }
+      });
+  }
+
+  async updateCourseMentor(dto: UpdateCourseMentorDto) {
+      const course = await this.prisma.course.findUnique({ where: { id: dto.courseId } });
+      if (!course) throw new NotFoundException('Course not found');
+
+      const mentor = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+      if (!mentor || mentor.role !== 'MENTOR') {
+          throw new BadRequestException('User is not a mentor');
+      }
+
+      return this.prisma.course.update({
+          where: { id: dto.courseId },
+          data: { mentorId: dto.userId }
+      });
   }
 
   private deleteFile(filePath: string): void {

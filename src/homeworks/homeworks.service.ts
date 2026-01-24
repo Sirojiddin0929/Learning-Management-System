@@ -3,7 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
 import { SubmitHomeworkDto } from './dto/submit-homework.dto';
 import { UpdateHomeworkDto } from './dto/update-homework.dto';
-import { CheckHomeworkDto } from './dto/check-homework.dto';
+import { CheckSubmissionDto } from './dto/check-submission.dto';
+import { HomeworkQueryDto, SubmissionQueryDto } from './dto/query-homework.dto';
 import { HomeworkSubStatus } from '@prisma/client';
 
 @Injectable()
@@ -41,21 +42,32 @@ export class HomeworksService {
     return homework;
   }
 
-  async getHomeworksByCourse(courseId: string) {
-    return this.prisma.homework.findMany({
-      where: {
-        lesson: {
-          section: {
-            courseId: courseId,
-          },
+  async getHomeworksByCourse(courseId: string, query: HomeworkQueryDto) {
+    const { offset, limit } = query;
+    const where = {
+      lesson: {
+        section: {
+          courseId: courseId,
         },
       },
-      include: {
-        lesson: {
-           select: { id: true, name: true, section: { select: { id: true, name: true } } }
-        }
-      }
-    });
+    };
+
+    const [total, homeworks] = await this.prisma.$transaction([
+      this.prisma.homework.count({ where }),
+      this.prisma.homework.findMany({
+        where,
+        skip: offset,
+        take: limit,
+        include: {
+          lesson: {
+             select: { id: true, name: true, section: { select: { id: true, name: true } } }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return { total, homeworks };
   }
 
   async submitHomework(userId: number, lessonId: string, dto: SubmitHomeworkDto) {
@@ -88,31 +100,63 @@ export class HomeworksService {
     });
   }
 
-  async getMySubmission(userId: number, lessonId: string) {
+  async getMySubmission(userId: number, lessonId: string, query: HomeworkQueryDto) {
+     const { offset, limit } = query;
      const homework = await this.prisma.homework.findUnique({
       where: { lessonId },
     });
 
     if (!homework) {
-      // It's possible there is no homework, so return null or empty?
-      // Or throw? Usually just return logic so frontend knows.
-      return null; 
+      return { total: 0, submissions: [] }; 
     }
 
-    return this.prisma.homeworkSubmission.findFirst({
-        where: { userId, homeworkId: homework.id },
-        orderBy: { createdAt: 'desc' } // Get latest
-    });
+    const where = { userId, homeworkId: homework.id };
+
+    const [total, submissions] = await this.prisma.$transaction([
+        this.prisma.homeworkSubmission.count({ where }),
+        this.prisma.homeworkSubmission.findMany({
+            where,
+            skip: offset,
+            take: limit,
+            orderBy: { createdAt: 'desc' }
+        })
+    ]);
+
+    return { total, submissions };
   }
 
-  async getAllSubmissions() {
-    return this.prisma.homeworkSubmission.findMany({
-      include: {
-        user: { select: { id: true, fullName: true, phone: true } },
-        homework: { include: { lesson: { select: { id: true, name: true } } } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+  async getAllSubmissions(query: SubmissionQueryDto) {
+    const { offset, limit, status, course_id, homework_id, user_id } = query;
+    const where: any = {};
+
+    if (status) where.status = status;
+    if (homework_id) where.homeworkId = homework_id;
+    if (user_id) where.userId = user_id;
+    if (course_id) {
+        where.homework = {
+            lesson: {
+                section: {
+                    courseId: course_id
+                }
+            }
+        };
+    }
+
+    const [total, submissions] = await this.prisma.$transaction([
+        this.prisma.homeworkSubmission.count({ where }),
+        this.prisma.homeworkSubmission.findMany({
+            where,
+            skip: offset,
+            take: limit,
+            include: {
+                user: { select: { id: true, fullName: true, phone: true } },
+                homework: { include: { lesson: { select: { id: true, name: true } } } }
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+    ]);
+
+    return { total, submissions };
   }
 
   async getSubmissionById(id: number) {
@@ -127,17 +171,19 @@ export class HomeworksService {
     return submission;
   }
 
-  async checkSubmission(dto: CheckHomeworkDto) {
+  async checkSubmission(dto: CheckSubmissionDto) {
     const submission = await this.prisma.homeworkSubmission.findUnique({
       where: { id: dto.submissionId },
     });
 
     if (!submission) throw new NotFoundException('Submission not found');
 
+    const status = dto.approved ? HomeworkSubStatus.APPROVED : HomeworkSubStatus.REJECTED;
+
     return this.prisma.homeworkSubmission.update({
       where: { id: dto.submissionId },
       data: {
-        status: dto.status,
+        status: status,
         reason: dto.reason,
       },
     });

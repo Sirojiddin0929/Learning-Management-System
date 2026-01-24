@@ -1,8 +1,8 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateQuestionDto {
-  @ApiProperty({ example: 'I have a problem with...' })
+export class AnswerQuestionDto {
+  @ApiProperty({ example: 'Here is the solution...' })
   @IsString()
   @IsNotEmpty()
   text: string;

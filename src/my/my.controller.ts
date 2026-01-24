@@ -1,17 +1,19 @@
-import { Controller, Get, Patch, Put, Post, Body, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Patch, Put, Post, Body, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { multerConfig } from '../config/file-upload.config';
 import { MyService } from './my.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { 
-  UpdateProfileDto, 
   UpdateLastActivityDto, 
   UpdatePhoneDto, 
-  UpdatePasswordDto, 
-  UpdateMentorProfileDto 
+  UpdatePasswordDto 
 } from './dto/my.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateMentorProfileDto } from './dto/update-mentor-profile.dto';
 
 @ApiTags('Profile')
 @ApiBearerAuth('access-token')
@@ -27,9 +29,12 @@ export class MyController {
   }
 
   @Patch('profile')
-  @ApiOperation({ summary: 'Update current user profile' })
-  updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
-    return this.myService.updateProfile(req.user.id, dto);
+  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Update current user profile (Multipart)' })
+  @ApiBody({ type: UpdateProfileDto }) // Use the new DTO for swagger
+  updateProfile(@Request() req, @Body() dto: UpdateProfileDto, @UploadedFile() image?: Express.Multer.File) {
+    return this.myService.updateProfile(req.user.id, dto, image);
   }
 
   @Get('last-activity')

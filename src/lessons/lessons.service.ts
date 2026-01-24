@@ -86,11 +86,29 @@ export class LessonsService {
     };
   }
 
-  async findAllSections(courseId: string) {
-    return this.prisma.lessonSection.findMany({
-      where: { courseId },
-      include: { lessons: true },
+  async getMineAllSections(userId: number, courseId: string, query: QueryLessonSectionsDto) {
+    // Logic can be similar to getAllSections but specifically for the student 'mine' context.
+    // For now, since it mimics getAllSections but for authorized student, we'll reuse the logic or replicate.
+    // We can add logic to check if student has access to course if needed, but for listing sections usually it's fine.
+    // If specific logic for 'mine' (progress?) is needed, it would go here.
+    // For this task, we implement pagination and include_lessons.
+    
+    return this.getAllSections(courseId, query);
+  }
+
+  async getSectionDetail(id: number) {
+    const section = await this.prisma.lessonSection.findUnique({
+      where: { id },
+      include: {
+        lessons: true,
+      },
     });
+
+    if (!section) {
+      throw new NotFoundException('Lesson section not found');
+    }
+
+    return section;
   }
 
   // =================== LESSON METHODS ===================
@@ -278,5 +296,30 @@ export class LessonsService {
     });
 
     return lesson;
+  }
+
+  async updateLessonView(lessonId: string, userId: number, view: boolean) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    return this.prisma.lessonView.upsert({
+      where: {
+        userId_lessonId: {
+          userId,
+          lessonId,
+        },
+      },
+      update: { view },
+      create: {
+        userId,
+        lessonId,
+        view,
+      },
+    });
   }
 }

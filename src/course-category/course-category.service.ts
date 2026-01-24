@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseCategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import { QueryCategoryDto } from './dto/query-category.dto';
 
 @Injectable()
 export class CourseCategoryService {
@@ -12,8 +13,11 @@ export class CourseCategoryService {
     });
   }
 
-  async findAll() {
+  async findAll(query: QueryCategoryDto) {
+    const { offset = 0, limit = 8 } = query;
     return this.prisma.courseCategory.findMany({
+      skip: offset,
+      take: limit,
       include: {
         _count: {
           select: { courses: true },
