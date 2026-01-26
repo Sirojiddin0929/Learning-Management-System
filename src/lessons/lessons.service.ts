@@ -10,7 +10,7 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 export class LessonsService {
   constructor(private prisma: PrismaService) {}
 
-  // =================== LESSON SECTION METHODS ===================
+  
 
   async createSection(dto: CreateLessonSectionDto) {
     return this.prisma.lessonSection.create({
@@ -87,11 +87,7 @@ export class LessonsService {
   }
 
   async getMineAllSections(userId: number, courseId: string, query: QueryLessonSectionsDto) {
-    // Logic can be similar to getAllSections but specifically for the student 'mine' context.
-    // For now, since it mimics getAllSections but for authorized student, we'll reuse the logic or replicate.
-    // We can add logic to check if student has access to course if needed, but for listing sections usually it's fine.
-    // If specific logic for 'mine' (progress?) is needed, it would go here.
-    // For this task, we implement pagination and include_lessons.
+    
     
     return this.getAllSections(courseId, query);
   }
@@ -111,17 +107,17 @@ export class LessonsService {
     return section;
   }
 
-  // =================== LESSON METHODS ===================
+ 
 
   async createLesson(dto: CreateLessonDto, videoFile?: Express.Multer.File) {
-    // Convert groupId to sectionId (number)
+    
     const sectionId = parseInt(dto.groupId, 10);
     
     if (isNaN(sectionId)) {
       throw new BadRequestException('Invalid groupId format');
     }
 
-    // Verify section exists
+    
     const section = await this.prisma.lessonSection.findUnique({
       where: { id: sectionId },
     });
@@ -130,10 +126,10 @@ export class LessonsService {
       throw new NotFoundException('Lesson group/section not found');
     }
 
-    // Determine video URL
+    
     let videoUrl: string;
     if (videoFile) {
-      videoUrl = `/uploads/lessons/${videoFile.filename}`;
+      videoUrl = `http://localhost:4000/uploads/lessons/${videoFile.filename}`;
     } else if (dto.videoUrl) {
       videoUrl = dto.videoUrl;
     } else {
@@ -162,7 +158,7 @@ export class LessonsService {
       throw new NotFoundException('Lesson not found');
     }
 
-    // Build update data
+    
     const updateData: any = {};
     
     if (dto.name !== undefined) {
@@ -173,9 +169,9 @@ export class LessonsService {
       updateData.about = dto.about;
     }
 
-    // Handle video update
+    
     if (videoFile) {
-      updateData.video = `/uploads/lessons/${videoFile.filename}`;
+      updateData.video = `http://localhost:4000/uploads/lessons/${videoFile.filename}`;
     } else if (dto.videoUrl !== undefined) {
       updateData.video = dto.videoUrl;
     }
@@ -262,9 +258,9 @@ export class LessonsService {
       throw new NotFoundException('Lesson not found');
     }
 
-    // Check if course is published or if user has access
+    
     if (!lesson.section.course.published) {
-      // Check if user has purchased or been assigned this course
+      
       const [purchased, assigned] = await Promise.all([
         this.prisma.purchasedCourse.findFirst({
           where: { userId, courseId: lesson.section.course.id },
@@ -279,7 +275,7 @@ export class LessonsService {
       }
     }
 
-    // Record lesson view
+    
     await this.prisma.lessonView.upsert({
       where: {
         userId_lessonId: {

@@ -36,10 +36,10 @@ export class CoursesService {
 
     
     if (files?.banner?.[0]) {
-      data.banner = `/uploads/courses/${files.banner[0].filename}`;
+      data.banner = `http://localhost:4000/uploads/courses/${files.banner[0].filename}`;
     }
     if (files?.introVideo?.[0]) {
-      data.introVideo = `/uploads/courses/${files.introVideo[0].filename}`;
+      data.introVideo = `http://localhost:4000/uploads/courses/${files.introVideo[0].filename}`;
     }
 
     return this.prisma.course.create({
@@ -73,13 +73,13 @@ export class CoursesService {
       if (course.banner) {
         this.deleteFile(course.banner);
       }
-      data.banner = `/uploads/courses/${files.banner[0].filename}`;
+      data.banner = `http://localhost:4000/uploads/courses/${files.banner[0].filename}`;
     }
     if (files?.introVideo?.[0]) {
       if (course.introVideo) {
         this.deleteFile(course.introVideo);
       }
-      data.introVideo = `/uploads/courses/${files.introVideo[0].filename}`;
+      data.introVideo = `http://localhost:4000/uploads/courses/${files.introVideo[0].filename}`;
     }
 
     return this.prisma.course.update({
@@ -276,9 +276,7 @@ export class CoursesService {
   }
 
   async getMyAssignedCourses(userId: number, query: QueryCoursesDto) {
-    // AssignedTo is for Assistants/Students assigned by admin/mentor?
-    // User request implies ASSISTANT role for this endpoint.
-    // We filter courses where assignedTo contains userId.
+    
     const { offset = 0, limit = 8, search, level, category_id, mentor_id, price_min, price_max, published } = query;
 
     const courseWhere: Prisma.CourseWhereInput = {};
@@ -324,7 +322,7 @@ export class CoursesService {
     };
   }
 
-  async getCourseAssistants(courseId: string, query: QueryCoursesDto) { // Reusing DTO for pagination
+  async getCourseAssistants(courseId: string, query: QueryCoursesDto) { 
       const { offset = 0, limit = 8 } = query;
       const where = { courseId };
 
@@ -345,7 +343,7 @@ export class CoursesService {
   }
 
   async assignAssistant(dto: AssignAssistantDto) {
-      // Check if already assigned
+      
       const exists = await this.prisma.assignedCourse.findUnique({
           where: {
               userId_courseId: {
@@ -359,14 +357,10 @@ export class CoursesService {
           throw new BadRequestException('Assistant already assigned to this course');
       }
 
-      // Check role? Assuming validation done elsewhere or trusting ID.
-      // Ideally check if user is ASSISTANT.
+      
       const user = await this.prisma.user.findUnique({ where: { id: dto.assistantId }});
       if (!user || user.role !== 'ASSISTANT') {
-           // Providing flexibility, maybe assigning STUDENT is also possible via this generic assignedTo?
-           // Request says "assign-assistant", so maybe strict check.
-           // Leaving flexible unless specified, or strictly warning.
-           // Let's strictly check if user exists.
+           
            if (!user) throw new NotFoundException('User not found');
       }
 

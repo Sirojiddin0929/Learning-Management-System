@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { RtGuard } from './rt-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/password-reset.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -40,14 +41,11 @@ export class AuthController {
     return this.authService.login(user);
   }
 
-  @ApiBearerAuth('access-token')
-  @UseGuards(RtGuard)
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  refresh(@Request() req) {
-    const user = req.user;
-    return this.authService.refreshTokens(user.sub, user.refreshToken);
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshTokens(dto.token);
   }
 
   @Post('reset-password/otp')

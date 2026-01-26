@@ -55,7 +55,7 @@ export class SmsService {
           throw retryError;
         }
       }
-
+      this.logger.error(`Eskiz: SMS yuborishda xato (+${phone}):`, error.response?.data || error.message);
       throw error;
     }
   }
@@ -87,6 +87,7 @@ export class SmsService {
           throw retryError;
         }
       }
+      this.logger.error(`Eskiz: SMS yuborishda xato (+${phone}):`, error.response?.data || error.message);
       throw error;
     }
   }

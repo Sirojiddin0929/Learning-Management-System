@@ -192,8 +192,12 @@ export class CoursesController {
   @Get()
   @ApiOperation({ summary: 'Get all courses (Public/Filtered)' })
   findAllCourses(@Query() query: QueryCoursesDto) {
-    // Making it public but filtered, as requested "Get /api/courses" with search params
-    return this.coursesService.getAllCourses(query);
+    
+    const effectiveQuery = {
+        ...query,
+        published: query.published !== undefined ? query.published : true
+    };
+    return this.coursesService.getAllCourses(effectiveQuery);
   }
 }
 

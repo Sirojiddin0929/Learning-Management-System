@@ -1,15 +1,4 @@
-import {
-  Controller,
-  Post,
-  Delete,
-  Get,
-  Body,
-  Param,
-  UseGuards,
-  UseInterceptors,
-  UploadedFiles,
-  ParseIntPipe,
-} from '@nestjs/common';
+import {Controller,Post,Delete,Get,Body,Param,UseGuards,UseInterceptors,UploadedFiles,ParseIntPipe,} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiConsumes } from '@nestjs/swagger';
 import { LessonFilesService } from './lesson-files.service';

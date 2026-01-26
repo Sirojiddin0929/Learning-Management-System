@@ -1,4 +1,4 @@
-// purchased-courses/dto/query-course-students.dto.ts
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Transform } from 'class-transformer';

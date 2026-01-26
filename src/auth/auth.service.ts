@@ -23,7 +23,10 @@ export class AuthService {
   ) {}
 
   async sendRegistrationOtp(dto: RegisterOtpDto) {
-    const existingUser = await this.usersService.findOne(dto.phone);
+    const cleanPhone = dto.phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('998') ? `+${cleanPhone}` : `+998${cleanPhone}`;
+    
+    const existingUser = await this.usersService.findOne(formattedPhone);
     if (existingUser) {
       throw new BadRequestException('User with this phone already exists');
     }
@@ -32,9 +35,12 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
-    await this.verifyOtp(registerDto.phone, registerDto.code);
+    const cleanPhone = registerDto.phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('998') ? `+${cleanPhone}` : `+998${cleanPhone}`;
 
-    const existingUser = await this.usersService.findOne(registerDto.phone);
+    await this.verifyOtp(formattedPhone, registerDto.code);
+
+    const existingUser = await this.usersService.findOne(formattedPhone);
     if (existingUser) {
       throw new BadRequestException('User with this phone already exists');
     }
@@ -42,21 +48,30 @@ export class AuthService {
     const hashedPassword = await argon2.hash(registerDto.password);
 
     const user = await this.usersService.create({
-      phone: registerDto.phone,
+      phone: formattedPhone,
       password: hashedPassword,
       fullName: registerDto.fullName,
       role: 'STUDENT',
     });
 
-    await this.clearOtp(registerDto.phone);
+    await this.clearOtp(formattedPhone);
 
-    const tokens = await this.getTokens(user.id, user.phone, user.role);
-    await this.updateRefreshToken(user.id, tokens.refresh_token);
-    return tokens;
+    return {
+      message: 'User successfully registered',
+      user: {
+        id: user.id,
+        phone: user.phone,
+        fullName: user.fullName,
+        role: user.role
+      }
+    };
   }
 
   async validateUser(phone: string, pass: string): Promise<any> {
-    const user = await this.usersService.findOne(phone);
+    const cleanPhone = phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('998') ? `+${cleanPhone}` : `+998${cleanPhone}`;
+
+    const user = await this.usersService.findOne(formattedPhone);
     if (user && (await argon2.verify(user.password, pass))) {
       const { password, ...result } = user;
       return result;
@@ -77,7 +92,17 @@ export class AuthService {
     return true;
   }
 
-  async refreshTokens(userId: number, rt: string) {
+  async refreshTokens(rt: string) {
+    let payload;
+    try {
+      payload = await this.jwtService.verifyAsync(rt, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET') || this.configService.get<string>('JWT_SECRET'),
+      });
+    } catch (e) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const userId = payload.sub;
     const user = await this.usersService.findById(userId);
     if (!user) throw new ForbiddenException('Access Denied');
 
@@ -134,18 +159,24 @@ export class AuthService {
   }
 
   async sendResetPasswordOtp(dto: ForgotPasswordDto) {
-    const user = await this.usersService.findOne(dto.phone);
+    const cleanPhone = dto.phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('998') ? `+${cleanPhone}` : `+998${cleanPhone}`;
+
+    const user = await this.usersService.findOne(formattedPhone);
     if (!user) {
       throw new BadRequestException('User with this phone number not found');
     }
 
-    return this.sendOtp(dto.phone);
+    return this.sendOtp(formattedPhone);
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    await this.verifyOtp(dto.phone, dto.code);
+    const cleanPhone = dto.phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('998') ? `+${cleanPhone}` : `+998${cleanPhone}`;
 
-    const user = await this.usersService.findOne(dto.phone);
+    await this.verifyOtp(formattedPhone, dto.code);
+
+    const user = await this.usersService.findOne(formattedPhone);
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -156,7 +187,7 @@ export class AuthService {
       data: { password: hashedPassword },
     });
 
-    await this.clearOtp(dto.phone);
+    await this.clearOtp(formattedPhone);
 
     return { message: 'Password reset successfully' };
   }
@@ -187,9 +218,7 @@ export class AuthService {
       await this.smsService.sendOtp(formattedPhone, otpCode);
 
       
-      // console.log('');
-      // console.log(`[OTP] For ${formattedPhone}: ${otpCode}`);
-      // console.log('');
+      
 
       return {
         success: true,

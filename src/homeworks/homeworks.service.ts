@@ -12,8 +12,12 @@ export class HomeworksService {
   constructor(private prisma: PrismaService) {}
 
   async createHomework(dto: CreateHomeworkDto) {
+    const data = { ...dto };
+    if (data.file && !data.file.startsWith('http')) {
+      data.file = `http://localhost:4000/uploads/homeworks/${data.file}`;
+    }
     return this.prisma.homework.create({
-      data: dto,
+      data,
     });
   }
 
@@ -21,9 +25,13 @@ export class HomeworksService {
     const homework = await this.prisma.homework.findUnique({ where: { id } });
     if (!homework) throw new NotFoundException('Homework not found');
 
+    const data = { ...dto };
+    if (data.file && !data.file.startsWith('http')) {
+      data.file = `http://localhost:4000/uploads/homeworks/${data.file}`;
+    }
     return this.prisma.homework.update({
       where: { id },
-      data: dto,
+      data,
     });
   }
 
@@ -87,13 +95,12 @@ export class HomeworksService {
         throw new BadRequestException('You have already submitted and passed this homework');
     }
     
-    // If re-submitting, we could update or create new? Schema doesn't enforce unique submission per user/homework, allowing history.
-    // Let's create new for now to keep history.
+    
     return this.prisma.homeworkSubmission.create({
       data: {
         userId,
         homeworkId: homework.id,
-        file: dto.file || '', // Handle potential null if DTO allows optional but schema says String (implied required or default?) Schema: file String.
+        file: dto.file ? `http://localhost:4000/uploads/submissions/${dto.file}` : '',
         text: dto.text,
         status: HomeworkSubStatus.PENDING,
       },

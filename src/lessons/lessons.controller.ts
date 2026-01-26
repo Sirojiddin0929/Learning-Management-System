@@ -29,7 +29,7 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { lessonMulterConfig } from '../config/lesson-upload.config';
 
-// =================== LESSONS CONTROLLER ===================
+
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsApiController {
@@ -110,7 +110,7 @@ export class LessonsApiController {
   }
 }
 
-// =================== LESSON GROUPS CONTROLLER ===================
+
 @ApiTags('Lesson Groups')
 @Controller('lesson-group')
 export class LessonsController {

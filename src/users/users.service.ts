@@ -197,7 +197,7 @@ export class UsersService {
   }
 
   
-  async createMentor(dto: CreateMentorDto) {
+  async createMentor(dto: CreateMentorDto, imageFile?: Express.Multer.File) {
     const existing = await this.findOne(dto.phone);
     if (existing) {
       throw new BadRequestException('User with this phone already exists');
@@ -209,7 +209,7 @@ export class UsersService {
         phone: dto.phone,
         password: hashedPassword,
         fullName: dto.fullName,
-        image: dto.image,
+        image: imageFile ? `http://localhost:4000/uploads/users/${imageFile.filename}` : (dto.image || null),
         role: UserRole.MENTOR,
         mentorProfile: {
           create: {
@@ -236,21 +236,21 @@ export class UsersService {
   }
 
   
-  async createAssistant(dto: CreateAssistantDto) {
+  async createAssistant(dto: CreateAssistantDto, imageFile?: Express.Multer.File) {
     const existing = await this.findOne(dto.phone);
     if (existing) {
       throw new BadRequestException('User with this phone already exists');
     }
 
     const hashedPassword = await argon2.hash(dto.password);
-    // Transaction to ensure both user creation and course assignment happen or neither
+    
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           phone: dto.phone,
           password: hashedPassword,
           fullName: dto.fullName,
-          image: dto.image,
+          image: imageFile ? `http://localhost:4000/uploads/users/${imageFile.filename}` : (dto.image || null),
           role: UserRole.ASSISTANT,
         },
         select: {
@@ -274,7 +274,7 @@ export class UsersService {
     });
   }
 
-  async updateMentor(id: number, dto: UpdateMentorDto) {
+  async updateMentor(id: number, dto: UpdateMentorDto, imageFile?: Express.Multer.File) {
     const user = await this.prisma.user.findFirst({
       where: { id, role: UserRole.MENTOR },
     });
@@ -285,7 +285,16 @@ export class UsersService {
 
     const updateData: any = {};
     if (dto.fullName) updateData.fullName = dto.fullName;
-    if (dto.image) updateData.image = dto.image;
+    
+    if (imageFile) {
+        if (user.image && user.image.includes('http://localhost:4000/uploads/users/')) {
+            
+        }
+        updateData.image = `http://localhost:4000/uploads/users/${imageFile.filename}`;
+    } else if (dto.image) {
+        updateData.image = dto.image;
+    }
+
     if (dto.phone) updateData.phone = dto.phone;
     if (dto.password) updateData.password = await argon2.hash(dto.password);
 

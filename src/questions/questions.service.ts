@@ -11,10 +11,14 @@ export class QuestionsService {
   constructor(private prisma: PrismaService) {}
 
   async createQuestion(userId: number, courseId: string, dto: CreateQuestionDto) {
+    const data = { ...dto };
+    if (data.file && !data.file.startsWith('http')) {
+      data.file = `http://localhost:4000/uploads/questions/${data.file}`;
+    }
     return this.prisma.question.create({
       data: {
         userId,
-        ...dto,
+        ...data,
         courseId,
       },
     });
@@ -25,9 +29,13 @@ export class QuestionsService {
     if (!question) throw new NotFoundException('Question not found');
     if (question.userId !== userId) throw new ForbiddenException('You can only update your own questions');
 
+    const data = { ...dto };
+    if (data.file && !data.file.startsWith('http')) {
+      data.file = `http://localhost:4000/uploads/questions/${data.file}`;
+    }
     return this.prisma.question.update({
       where: { id },
-      data: dto,
+      data,
     });
   }
 
@@ -52,8 +60,7 @@ export class QuestionsService {
         where.answer = { isNot: null };
       } else {
         where.answer = null; 
-        // Note: Prisma 1-to-1 relations where condition for null might need explicit "is: null" or just "answer: null" depending on Prisma version, but usually answer: null works or answer: { is: null }
-        // For safe typing and latest Prisma:
+        
         where.answer = { is: null };
       }
     }
@@ -135,7 +142,7 @@ export class QuestionsService {
         userId,
         questionId,
         text: dto.text,
-        file: dto.file,
+        file: dto.file ? `http://localhost:4000/uploads/answers/${dto.file}` : null,
       },
     });
   }
@@ -145,9 +152,13 @@ export class QuestionsService {
     const answer = await this.prisma.questionAnswer.findUnique({ where: { id } });
     if (!answer) throw new NotFoundException('Answer not found');
 
+    const data = { ...dto };
+    if (data.file && !data.file.startsWith('http')) {
+      data.file = `http://localhost:4000/uploads/answers/${data.file}`;
+    }
     return this.prisma.questionAnswer.update({
       where: { id },
-      data: dto,
+      data,
     });
   }
 

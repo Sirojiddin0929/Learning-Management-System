@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsNumber, IsEnum, Min, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CourseLevel } from '@prisma/client';
 
@@ -43,7 +43,11 @@ export class QueryCoursesDto {
   @ApiPropertyOptional({ description: 'Filter by published status', example: true })
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   published?: boolean;
 
   @ApiPropertyOptional({ description: 'Pagination offset', example: 0, default: 0 })

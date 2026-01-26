@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { userMulterConfig } from '../config/user-upload.config';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -67,30 +69,37 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post('create/mentor')
+  @UseInterceptors(FileInterceptor('image', userMulterConfig))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create mentor user (Admin only)' })
-  createMentor(@Body() dto: CreateMentorDto) {
-    return this.usersService.createMentor(dto);
+  createMentor(@Body() dto: CreateMentorDto, @UploadedFile() image?: Express.Multer.File) {
+    return this.usersService.createMentor(dto, image);
   }
 
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MENTOR)
   @Post('create/assistant')
+  @UseInterceptors(FileInterceptor('image', userMulterConfig))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create assistant user (Admin/Mentor)' })
-  createAssistant(@Body() dto: CreateAssistantDto) {
-    return this.usersService.createAssistant(dto);
+  createAssistant(@Body() dto: CreateAssistantDto, @UploadedFile() image?: Express.Multer.File) {
+    return this.usersService.createAssistant(dto, image);
   }
 
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch('update/mentor/:id')
+  @UseInterceptors(FileInterceptor('image', userMulterConfig))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update mentor (Admin only)' })
   updateMentor(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMentorDto,
+    @UploadedFile() image?: Express.Multer.File,
   ) {
-    return this.usersService.updateMentor(id, dto);
+    return this.usersService.updateMentor(id, dto, image);
   }
 
   @ApiBearerAuth('access-token')

@@ -4,6 +4,7 @@ import { Transform } from 'class-transformer';
 
 export class CreateLessonFilesDto {
   @ApiProperty({ description: 'Files to upload', type: 'array', items: { type: 'string', format: 'binary' } })
+  @IsOptional()
   files: any[];
 
   @ApiProperty({ description: 'Lesson UUID' })

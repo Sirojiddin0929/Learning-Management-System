@@ -1,7 +1,7 @@
 import {Controller,Post,Body,Get,Param,UseGuards,Request,Patch,Delete,ParseIntPipe,Query,UseInterceptors,UploadedFile,} from '@nestjs/common';
 import { QuestionsService } from './questions.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
-import { AnswerQuestionDto } from './dto/answer-question.dto'; // Updated import
+import { AnswerQuestionDto } from './dto/answer-question.dto'; 
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { UpdateAnswerDto } from './dto/update-answer.dto';
 import { QuestionQueryDto } from './dto/query-question.dto';
@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags, ApiParam, ApiConsumes, ApiBody } 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { userInfo } from 'os';
 
 @ApiTags('Questions')
 @Controller('questions')
@@ -113,7 +114,7 @@ export class QuestionsController {
   }
 
   @Post('answer/:id')
-  @Roles(UserRole.MENTOR, UserRole.ASSISTANT, UserRole.ADMIN)
+  @Roles(UserRole.MENTOR, UserRole.ASSISTANT)
   @ApiOperation({ summary: 'Answer a question (ID is Question ID)' })
   @ApiParam({ name: 'id', type: 'number', description: 'Question ID' })
   @ApiConsumes('multipart/form-data')

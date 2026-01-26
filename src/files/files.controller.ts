@@ -22,7 +22,7 @@ export class FilesController {
 
   @Get('private/lesson-file/:lessonId/:name')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.STUDENT, UserRole.ADMIN, UserRole.MENTOR)
+  @Roles(UserRole.STUDENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get a private lesson file (requires purchase)' })
   @ApiParam({ name: 'lessonId', description: 'Lesson UUID' })
@@ -33,7 +33,7 @@ export class FilesController {
     @Request() req,
     @Res() res: Response,
   ) {
-    // Admins and Mentors skip purchase check for now, or just check role
+    
     if (req.user.role === UserRole.STUDENT) {
       await this.filesService.checkFileAccess(req.user.id, lessonId);
     }
@@ -44,7 +44,7 @@ export class FilesController {
 
   @Get('private/video/:lessonId/:hlsf')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.STUDENT, UserRole.ADMIN, UserRole.MENTOR)
+  @Roles(UserRole.STUDENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get a private lesson video/segment (requires purchase)' })
   @ApiParam({ name: 'lessonId', description: 'Lesson UUID' })

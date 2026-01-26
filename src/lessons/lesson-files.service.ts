@@ -14,7 +14,7 @@ export class LessonFilesService {
       throw new BadRequestException('At least one file is required');
     }
 
-    // Verify lesson exists
+    
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: dto.lessonId },
     });
@@ -23,15 +23,15 @@ export class LessonFilesService {
       throw new NotFoundException('Lesson not found');
     }
 
-    // Parse notes array
+    
     const notes = dto.notes || [];
 
-    // Create lesson files
+    
     const createdFiles = await Promise.all(
       files.map((file, index) => {
         return this.prisma.lessonFile.create({
           data: {
-            file: `/uploads/lesson-files/${file.filename}`,
+            file: `http://localhost:4000/uploads/lesson-files/${file.filename}`,
             note: notes[index] || null,
             lessonId: dto.lessonId,
           },
@@ -62,7 +62,7 @@ export class LessonFilesService {
   }
 
   async getLessonFiles(lessonId: string) {
-    // Verify lesson exists
+    
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
     });

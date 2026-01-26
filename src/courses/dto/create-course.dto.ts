@@ -24,12 +24,12 @@ export class CreateCourseDto {
   @ApiProperty({ type: 'string', format: 'binary', description: 'Banner image file', required: false })
   @IsString()
   @IsOptional()
-  banner?: any; // Changed from string to any for file handling
+  banner?: any; 
 
   @ApiProperty({ type: 'string', format: 'binary', required: false, description: 'Intro video file' })
   @IsString()
   @IsOptional()
-  introVideo?: any; // Changed from string to any for file handling
+  introVideo?: any; 
 
   @ApiProperty({ enum: CourseLevel, example: CourseLevel.BEGINNER, description: 'Course difficulty level' })
   @IsEnum(CourseLevel)

@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Put, Post, Body, UseGuards, Request, UseInterce
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { multerConfig } from '../config/file-upload.config';
+import { userMulterConfig } from '../config/user-upload.config';
 import { MyService } from './my.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -29,10 +30,10 @@ export class MyController {
   }
 
   @Patch('profile')
-  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @UseInterceptors(FileInterceptor('image', userMulterConfig))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update current user profile (Multipart)' })
-  @ApiBody({ type: UpdateProfileDto }) // Use the new DTO for swagger
+  @ApiBody({ type: UpdateProfileDto }) 
   updateProfile(@Request() req, @Body() dto: UpdateProfileDto, @UploadedFile() image?: Express.Multer.File) {
     return this.myService.updateProfile(req.user.id, dto, image);
   }
@@ -44,7 +45,7 @@ export class MyController {
     return this.myService.getLastActivity(req.user.id);
   }
 
-  @Put('last-activity')
+  @Patch('last-activity')
   @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Update student last activity' })
   updateLastActivity(@Request() req, @Body() dto: UpdateLastActivityDto) {

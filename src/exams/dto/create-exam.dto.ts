@@ -19,7 +19,7 @@ export class CreateExamDto {
   @IsNumber()
   @Type(() => Number)
   @IsOptional()
-  sectionId?: number; // Kept for backward compatibility if needed, but request uses lessonGroupId
+  sectionId?: number; 
 
   @ApiProperty({ example: 'Direct Object Module' })
   @IsString()

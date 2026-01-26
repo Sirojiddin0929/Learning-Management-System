@@ -57,9 +57,15 @@ export class ExamsService {
     const exam = await this.prisma.exam.findUnique({ where: { id } });
     if (!exam) throw new NotFoundException('Exam question not found');
 
+    const { lessonGroupId, sectionId, ...data } = dto;
+    const finalSectionId = lessonGroupId || sectionId;
+
     return this.prisma.exam.update({
       where: { id },
-      data: dto,
+      data: {
+        ...data,
+        ...(finalSectionId && { sectionId: finalSectionId }),
+      },
     });
   }
 

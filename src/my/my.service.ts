@@ -25,7 +25,7 @@ export class MyService {
         role: true,
         image: true,
         createdAt: true,
-        mentorProfile: true, // Make sure this is selected
+        mentorProfile: true, 
       },
     });
     if (!user) throw new NotFoundException('User not found');
@@ -37,13 +37,13 @@ export class MyService {
     if (!user) throw new NotFoundException('User not found');
 
     const data: any = { ...dto };
-    delete data.image; // Remove dummy image field from dto if present from swagger binary field
+    delete data.image; 
 
     if (imageFile) {
       if (user.image) {
         this.deleteFile(user.image);
       }
-      data.image = `/uploads/${imageFile.filename}`; // Assuming general uploads or specific config
+      data.image = `http://localhost:4000/uploads/users/${imageFile.filename}`;
     }
 
     return this.prisma.user.update({
@@ -57,17 +57,32 @@ export class MyService {
     });
   }
 
-  // ... (last activity and phone/password methods remain same)
+  
 
   async getLastActivity(userId: number) {
-    return this.prisma.lastActivity.findUnique({
+    const activity = await this.prisma.lastActivity.findUnique({
       where: { userId },
       include: {
-        course: true,
-        section: true,
-        lesson: true,
+        course: {
+          select: { id: true, name: true, banner: true }
+        },
+        section: {
+          select: { id: true, name: true }
+        },
+        lesson: {
+          select: { id: true, name: true }
+        },
       },
     });
+
+    if (!activity) {
+      return {
+        message: 'No activity found',
+        data: null
+      };
+    }
+
+    return activity;
   }
 
   async updateLastActivity(userId: number, dto: UpdateLastActivityDto) {

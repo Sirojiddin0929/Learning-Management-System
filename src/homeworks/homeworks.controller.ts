@@ -1,18 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  Param,
-  UseGuards,
-  Request,
-  ParseIntPipe,
-  Patch,
-  Delete,
-  Query,
-  UseInterceptors,
-  UploadedFile,
-} from '@nestjs/common';
+import {Controller,Post,Body,Get,Param,UseGuards,Request,ParseIntPipe,Patch,Delete,Query,UseInterceptors,UploadedFile,} from '@nestjs/common';
 import { HomeworksService } from './homeworks.service';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
 import { SubmitHomeworkDto } from './dto/submit-homework.dto';
