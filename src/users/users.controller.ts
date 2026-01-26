@@ -40,7 +40,7 @@ export class UsersController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN,UserRole.STUDENT)
   @Get('single/:id')
   @ApiOperation({ summary: 'Get single user by ID (Admin only)' })
   getUserById(@Param('id', ParseIntPipe) id: number) {

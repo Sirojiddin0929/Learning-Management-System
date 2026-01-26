@@ -81,7 +81,7 @@ export class CoursesController {
   @ApiBearerAuth('access-token')
   @Get('all')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN,UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all courses with filtering and pagination (Admin only)' })
   getAllCourses(@Query() query: QueryCoursesDto) {
     return this.coursesService.getAllCourses(query);
@@ -90,7 +90,7 @@ export class CoursesController {
   @ApiBearerAuth('access-token')
   @Get('my')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MENTOR, UserRole.ADMIN)
+  @Roles(UserRole.MENTOR, UserRole.ADMIN,UserRole.STUDENT)
   @ApiOperation({ summary: 'Get my courses as a mentor with filtering and pagination' })
   getMyCourses(@Request() req, @Query() query: QueryCoursesDto) {
     return this.coursesService.getMyCourses(req.user.id, query);

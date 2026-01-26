@@ -39,7 +39,7 @@ export class PurchasedCoursesController {
   }
 
   @Get('course/:id/students')
-  @Roles(UserRole.MENTOR, UserRole.ADMIN)
+  @Roles(UserRole.MENTOR, UserRole.ADMIN,UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all students who purchased a specific course (Mentor, Admin)' })
   getCourseStudents(@Param('id') courseId: string, @Query() query:QueryCourseStudentsDto) {
     return this.purchasedCoursesService.getCourseStudents(courseId);

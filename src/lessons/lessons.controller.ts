@@ -160,8 +160,9 @@ export class LessonsController {
   ) {
     return this.lessonsService.getAllSections(courseId, query);
   }
-
+  @ApiBearerAuth('access-token')
   @Get('mine-all/:course_id')
+  @UseGuards(JwtAuthGuard,RolesGuard)
   @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'Get all lesson groups for a course (Student)' })
   @ApiParam({ name: 'course_id', description: 'Course UUID' })

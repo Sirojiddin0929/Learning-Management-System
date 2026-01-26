@@ -19,14 +19,14 @@ export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}
 
   @Post('create')
-  @Roles(UserRole.ADMIN, UserRole.MENTOR)
+  @Roles(UserRole.ADMIN, UserRole.MENTOR,UserRole.STUDENT)
   @ApiOperation({ summary: 'Create a single exam question' })
   createExam(@Body() dto: CreateExamDto) {
     return this.examsService.createExam(dto);
   }
 
   @Post('create/many')
-  @Roles(UserRole.ADMIN, UserRole.MENTOR)
+  @Roles(UserRole.ADMIN, UserRole.MENTOR,UserRole.STUDENT)
   @ApiOperation({ summary: 'Create multiple exam questions' })
   createManyExams(@Body() dto: CreateManyExamsDto) {
     return this.examsService.createManyExams(dto);
