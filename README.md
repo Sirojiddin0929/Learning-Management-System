@@ -1,3 +1,4 @@
+# [Learning-Management-System](https://github.com/Sirojiddin0929/Learning-Management-System)
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
@@ -23,7 +24,7 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Bu mening [Learning-Management-System](https://github.com/Sirojiddin0929/Learning-Management-System) loyiham. Bu loyiha onlayn kurslarni boshqarish uchun yaratilgan.
 
 ## Project setup
 
@@ -96,3 +97,4 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
