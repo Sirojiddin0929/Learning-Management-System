@@ -1,0 +1,44 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main  # Kodingiz qaysi branchga push bo'lganda deploy bo'lishi (masalan: master yoki main)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Loyiha papkasiga kirish
+            cd /var/www/online-course  # BU YERGA SERVERDAGI LOYIHA PAPKASINI YOZING
+
+            # 2. Yangi kodni GitHub-dan tortib olish
+            git pull origin main
+
+            # 3. Kutubxonalarni o'rnatish (Node.js misolida)
+            npm install
+
+            # 4. Prisma Client-ni generatsiya qilish (Neon DB uchun shart!)
+            npx prisma generate
+
+            # 5. Loyihani build qilish (agar kerak bo'lsa)
+            npm run build
+
+            # 6. PM2 orqali loyihani qayta ishga tushirish
+            # Agar online-course ishlayotgan bo'lsa restart qiladi, bo'lmasa start qiladi
+            pm2 restart online-course || pm2 start dist/src/main.js --name "online-course"
+
+            # 7. PM2 holatini saqlab qo'yish (Server o'chib yonsa avtomatik yoqilishi uchun)
+            pm2 save
